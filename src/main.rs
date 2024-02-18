@@ -2,11 +2,8 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
 
-#[derive(Serialize, Deserialize, Default, Debug)]
-pub struct Ingredient {
-    ingredient: String,
-    measure: String,
-}
+mod ingredients;
+use ingredients::Ingredient;
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct Meal {
@@ -27,7 +24,7 @@ pub struct Meals {
     meals: Vec<Meal>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Tag {
     Beans,
     Onthego,
@@ -108,7 +105,8 @@ pub enum Tag {
 
 fn main() {
     println!("Starting CulinarWizard!");
-    let data = fs::read_to_string("resources/meals.json").expect("File doesn't exist!");
+    let data = fs::read_to_string("resources/meals_abridged.json").expect("File doesn't exist!");
     let meals = serde_json::from_str::<Meals>(&data).expect("Couldn't parse json!");
-    println!("Success! {:?}", meals.meals[0]);
+
+    println!("Success! {:?}", meals);
 }

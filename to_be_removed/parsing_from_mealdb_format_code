@@ -157,3 +157,154 @@ fn create_ingredients(meal: OldMeal) -> Vec<Ingredient> {
     }
     let new_data = serde_json::to_string(&new_meals).expect("Couldn't serialize json!");
     fs::write("resources/meals2.json", new_data).expect("File doesn't exist!");
+
+
+
+    // Later parsing for the ingredients (also have to fix the file itself):
+
+
+    #[derive(Serialize, Deserialize, Debug, Clone)]
+    pub struct OldIngredient {
+        pub ingredient: String,
+        pub measure: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub form: Option<String>,
+    }
+    
+
+pub fn parse_measure(s: &str) -> Measure {
+    if s == "to serve" || s == "pinch" {
+        return Measure {
+            value: 1.0,
+            scale: Scale::ABit,
+        };
+    }
+    let measure_split = s.split(" ").collect::<Vec<&str>>();
+    if measure_split.len() == 1 {
+        if measure_split[0]
+            .chars()
+            .all(|c| char::is_numeric(c) || c == '.')
+        {
+            return Measure {
+                value: measure_split[0].parse::<f32>().unwrap(),
+                scale: Scale::Quantity,
+            };
+        }
+    } else if measure_split.len() >= 2 {
+        if measure_split[0]
+            .chars()
+            .all(|c| char::is_numeric(c) || c == '.')
+        {
+            match measure_split[1] {
+                "g" => {
+                    return Measure {
+                        value: measure_split[0].parse::<f32>().unwrap(),
+                        scale: Scale::Grams,
+                    };
+                }
+                "cup" | "cups" => {
+                    return Measure {
+                        value: measure_split[0].parse::<f32>().unwrap(),
+                        scale: Scale::Cup,
+                    };
+                }
+                "can" | "cans" => {
+                    return Measure {
+                        value: measure_split[0].parse::<f32>().unwrap(),
+                        scale: Scale::Can,
+                    };
+                }
+                "l" | "liters" | "liter" => {
+                    return Measure {
+                        value: (measure_split[0].parse::<f32>().unwrap() * 1000.0),
+                        scale: Scale::Mililiters,
+                    };
+                }
+                "ml" | "mililiters" | "mililiter" => {
+                    return Measure {
+                        value: measure_split[0].parse::<f32>().unwrap(),
+                        scale: Scale::Mililiters,
+                    };
+                }
+                "tsp" | "teaspoon" | "teaspoons" => {
+                    return Measure {
+                        value: measure_split[0]
+                            .parse::<f32>()
+                            .unwrap_or_else(|_| panic!("Failed at: {}", measure_split[0])),
+                        scale: Scale::Teaspoon,
+                    };
+                }
+                "tbs" | "tablespoon" | "tablespoons" => {
+                    return Measure {
+                        value: measure_split[0].parse::<f32>().unwrap(),
+                        scale: Scale::Tablespoon,
+                    };
+                }
+                "slice" | "slices" => {
+                    return Measure {
+                        value: measure_split[0].parse::<f32>().unwrap(),
+                        scale: Scale::Slice,
+                    };
+                }
+                sth => {
+                    println!("Couldn't match! {} ", sth)
+                }
+            }
+        }
+    }
+    println!("{:?}", measure_split);
+    Measure {
+        value: -100.0,
+        scale: Scale::Quantity,
+    }
+}
+
+
+    #[derive(Serialize, Deserialize, Default, Debug, Clone)]
+    pub struct OldMeal {
+        meal_id: u16,
+        meal_name: String,
+        category: String,
+        area: String,
+        instructions: Vec<String>,
+        meal_thumb: String,
+        tags: Vec<Tag>,
+        youtube: String,
+        source: String,
+        ingredient_list: Vec<OldIngredient>,
+    }
+
+    #[derive(Serialize, Deserialize, Default, Debug)]
+pub struct OldMeals {
+    meals: Vec<OldMeal>,
+}
+
+
+    let new_meals = Meals {
+        meals: meals
+            .meals
+            .iter_mut()
+            .map(|meal| Meal {
+                meal_id: meal.meal_id,
+                meal_name: meal.meal_name.clone(),
+                category: meal.category.clone(),
+                area: meal.area.clone(),
+                instructions: meal.instructions.clone(),
+                meal_thumb: meal.meal_thumb.clone(),
+                tags: meal.tags.clone(),
+                youtube: meal.youtube.clone(),
+                source: meal.source.clone(),
+                ingredient_list: meal
+                    .ingredient_list
+                    .iter_mut()
+                    .map(|ingredient| Ingredient {
+                        ingredient: ingredient.ingredient.clone(),
+                        measure: parse_measure(&ingredient.measure),
+                        form: ingredient.form.clone(),
+                    })
+                    .collect::<Vec<Ingredient>>(),
+            })
+            .collect::<Vec<Meal>>(),
+    };
+    let new_data = serde_json::to_string(&new_meals).expect("Couldn't serialize json!");
+    fs::write("resources/meals2.json", new_data).expect("File doesn't exist!");
